@@ -8,6 +8,8 @@ if (any(not_inst)) {
 
   if(tolower(a) == "y") {
     install.packages(pkgs[not_inst])
+  } else {
+    stop("Cannot continue.")
   }
 }
 
