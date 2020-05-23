@@ -3,3 +3,4 @@
 .RData
 .Ruserdata
 *.0.1.tar.gz
+data/*
