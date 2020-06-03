@@ -242,19 +242,23 @@ tad3$PTETHCAT <- factor(tad3$PTETHCAT)
 tad3$PTRACCAT <- factor(tad3$PTRACCAT)
 
 # scatterplot matrix
-dataset <- select(tad1, -(RID:EXAMDATE), -ADAS13, -ADAS13_bl, -Ventricles, -Ventricles_bl) %>% filter(complete.cases(.))
+# dataset <- select(tad1, -(RID:EXAMDATE), -ADAS13, -ADAS13_bl, -Ventricles, -Ventricles_bl, -DXCHANGE, -DX_bl) %>% filter(complete.cases(.))
+dataset <- select(tad1, DX, PTGENDER, PTEDUCAT, PTETHCAT, PTRACCAT, AGE, Hippocampus, Entorhinal, MidTemp) %>% filter(complete.cases(.))
 dataset$DX[dataset$DX == "NL to MCI"] <- "MCI"
+dataset$DX[dataset$DX == "Dementia to MCI"] <- "MCI"
 dataset$DX[dataset$DX == "MCI to Dementia"] <- "Dementia"
 dataset$DX[dataset$DX == "MCI to NL"] <- "NL"
 dataset$DX <- factor(dataset$DX, ordered = TRUE)
-dataset$DX_bl <- factor(dataset$DX_bl)
+# dataset$DX_bl <- factor(dataset$DX_bl)
 
-validation <- select(tad2, -(RID:EXAMDATE), -ADAS13, -ADAS13_bl, -Ventricles, -Ventricles_bl) %>% filter(complete.cases(.))
+# validation <- select(tad2, -(RID:EXAMDATE), -ADAS13, -ADAS13_bl, -Ventricles, -Ventricles_bl, -DXCHANGE, -DX_bl) %>% filter(complete.cases(.))
+validation <- select(tad2, DX, PTGENDER, PTEDUCAT, PTETHCAT, PTRACCAT, AGE, Hippocampus, Entorhinal, MidTemp) %>% filter(complete.cases(.))
 validation$DX[validation$DX == "NL to MCI"] <- "MCI"
+validation$DX[validation$DX == "Dementia to MCI"] <- "MCI"
 validation$DX[validation$DX == "MCI to Dementia"] <- "Dementia"
 validation$DX[validation$DX == "MCI to NL"] <- "NL"
 validation$DX <- factor(validation$DX, ordered = TRUE)
-validation$DX_bl <- factor(validation$DX_bl)
+# validation$DX_bl <- factor(validation$DX_bl)
 
 metric <- "Accuracy"
 control <- trainControl(
