@@ -285,7 +285,7 @@ auc(long_mroc)
 
 set.seed(7)
 cross_pred <- predict(fit, cross_sectional)
-confusionMatrix(long_pred, cross_sectional$DX)
+confusionMatrix(cross_pred, cross_sectional$DX)
 cross_mroc <- suppressWarnings(multiclass.roc(cross_pred, cross_sectional$DX))
 auc(cross_mroc)
 
