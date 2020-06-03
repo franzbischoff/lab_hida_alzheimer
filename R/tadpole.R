@@ -3,6 +3,7 @@ library(knitr)
 library(ADNIMERGE)
 library(ggplot2)
 library(dplyr)
+library(caret)
 library(Hmisc)
 library(gridExtra)
 library(RColorBrewer)
@@ -144,80 +145,128 @@ tadpole_d2 <- filter(tadpole_d1_d2, D2 == 1)
 ### - Disease Progression Model
 ###
 
-tad1 <- tadpole_d1 %>% select(
-  RID, PTID, VISCODE, SITE, D1, D2, COLPROT, ORIGPROT, EXAMDATE,
-  PTGENDER, PTEDUCAT, PTETHCAT, PTRACCAT, APOE4,AGE,
-  Hippocampus, Hippocampus_bl,
-  WholeBrain, WholeBrain_bl,
-  Entorhinal, Entorhinal_bl,
-  MidTemp, MidTemp_bl,
-  FDG, FDG_bl,
-  AV45, AV45_bl,
-  ABETA_UPENNBIOMK9_04_19_17,
-  TAU_UPENNBIOMK9_04_19_17,
-  PTAU_UPENNBIOMK9_04_19_17,
-  CDRSB, CDRSB_bl,
-  ADAS11, ADAS11_bl,
-  MMSE, MMSE_bl,
-  RAVLT_immediate, RAVLT_immediate_bl,
-  DX, DX_bl, DXCHANGE,
-  ADAS13, ADAS13_bl,
-  Ventricles, Ventricles_bl
-) %>% mutate(ABETA_UPENNBIOMK9_04_19_17 = as.numeric(ABETA_UPENNBIOMK9_04_19_17),
-             TAU_UPENNBIOMK9_04_19_17 = as.numeric(TAU_UPENNBIOMK9_04_19_17),
-             PTAU_UPENNBIOMK9_04_19_17 = as.numeric(PTAU_UPENNBIOMK9_04_19_17))
+tad1 <- tadpole_d1 %>%
+  select(
+    RID, PTID, VISCODE, SITE, D1, D2, COLPROT, ORIGPROT, EXAMDATE,
+    PTGENDER, PTEDUCAT, PTETHCAT, PTRACCAT, APOE4, AGE,
+    Hippocampus, Hippocampus_bl,
+    WholeBrain, WholeBrain_bl,
+    Entorhinal, Entorhinal_bl,
+    MidTemp, MidTemp_bl,
+    FDG, FDG_bl,
+    AV45, AV45_bl,
+    ABETA_UPENNBIOMK9_04_19_17,
+    TAU_UPENNBIOMK9_04_19_17,
+    PTAU_UPENNBIOMK9_04_19_17,
+    CDRSB, CDRSB_bl,
+    ADAS11, ADAS11_bl,
+    MMSE, MMSE_bl,
+    RAVLT_immediate, RAVLT_immediate_bl,
+    DX, DX_bl, DXCHANGE,
+    ADAS13, ADAS13_bl,
+    Ventricles, Ventricles_bl
+  ) %>%
+  mutate(
+    ABETA_UPENNBIOMK9_04_19_17 = if_else(ABETA_UPENNBIOMK9_04_19_17 == "<200", "190", ABETA_UPENNBIOMK9_04_19_17),
+    TAU_UPENNBIOMK9_04_19_17 = if_else(TAU_UPENNBIOMK9_04_19_17 == "<80", "70", TAU_UPENNBIOMK9_04_19_17),
+    PTAU_UPENNBIOMK9_04_19_17 = if_else(PTAU_UPENNBIOMK9_04_19_17 == "<8", "7", PTAU_UPENNBIOMK9_04_19_17)
+  ) %>%
+  mutate(
+    ABETA_UPENNBIOMK9_04_19_17 = as.numeric(ABETA_UPENNBIOMK9_04_19_17),
+    TAU_UPENNBIOMK9_04_19_17 = as.numeric(TAU_UPENNBIOMK9_04_19_17),
+    PTAU_UPENNBIOMK9_04_19_17 = as.numeric(PTAU_UPENNBIOMK9_04_19_17)
+  )
 
-dxfactors <- c("Stable:NL to NL", "Stable:MCI to MCI", "Stable:AD to AD", "Conv:NL to MCI", "Conv:MCI to AD",
-               "Conv:NL to AD", "Rev:MCI to NL", "Rev:AD to MCI", "Rev:AD to NL")
+dxfactors <- c(
+  "Stable:NL to NL", "Stable:MCI to MCI", "Stable:AD to AD", "Conv:NL to MCI", "Conv:MCI to AD",
+  "Conv:NL to AD", "Rev:MCI to NL", "Rev:AD to MCI", "Rev:AD to NL"
+)
 
 tad1$DXCHANGE <- factor(tad1$DXCHANGE, 1:9, dxfactors)
+tad1$PTGENDER <- factor(tad1$PTGENDER)
+tad1$PTETHCAT <- factor(tad1$PTETHCAT)
+tad1$PTRACCAT <- factor(tad1$PTRACCAT)
 
-tad2 <- tadpole_d2 %>% select(
-  RID, PTID, VISCODE, SITE, D1, D2, COLPROT, ORIGPROT, EXAMDATE,
-  PTGENDER, PTEDUCAT, PTETHCAT, PTRACCAT, APOE4,AGE,
-  Hippocampus, Hippocampus_bl,
-  WholeBrain, WholeBrain_bl,
-  Entorhinal, Entorhinal_bl,
-  MidTemp, MidTemp_bl,
-  FDG, FDG_bl,
-  AV45, AV45_bl,
-  ABETA_UPENNBIOMK9_04_19_17,
-  TAU_UPENNBIOMK9_04_19_17,
-  PTAU_UPENNBIOMK9_04_19_17,
-  CDRSB, CDRSB_bl,
-  ADAS11, ADAS11_bl,
-  MMSE, MMSE_bl,
-  RAVLT_immediate, RAVLT_immediate_bl,
-  DX, DX_bl, DXCHANGE,
-  ADAS13, ADAS13_bl,
-  Ventricles, Ventricles_bl
-) %>% mutate(ABETA_UPENNBIOMK9_04_19_17 = as.numeric(ABETA_UPENNBIOMK9_04_19_17),
-             TAU_UPENNBIOMK9_04_19_17 = as.numeric(TAU_UPENNBIOMK9_04_19_17),
-             PTAU_UPENNBIOMK9_04_19_17 = as.numeric(PTAU_UPENNBIOMK9_04_19_17))
+tad2 <- tadpole_d2 %>%
+  select(
+    RID, PTID, VISCODE, SITE, D1, D2, COLPROT, ORIGPROT, EXAMDATE,
+    PTGENDER, PTEDUCAT, PTETHCAT, PTRACCAT, APOE4, AGE,
+    Hippocampus, Hippocampus_bl,
+    WholeBrain, WholeBrain_bl,
+    Entorhinal, Entorhinal_bl,
+    MidTemp, MidTemp_bl,
+    FDG, FDG_bl,
+    AV45, AV45_bl,
+    ABETA_UPENNBIOMK9_04_19_17,
+    TAU_UPENNBIOMK9_04_19_17,
+    PTAU_UPENNBIOMK9_04_19_17,
+    CDRSB, CDRSB_bl,
+    ADAS11, ADAS11_bl,
+    MMSE, MMSE_bl,
+    RAVLT_immediate, RAVLT_immediate_bl,
+    DX, DX_bl, DXCHANGE,
+    ADAS13, ADAS13_bl,
+    Ventricles, Ventricles_bl
+  ) %>%
+  mutate(
+    ABETA_UPENNBIOMK9_04_19_17 = if_else(ABETA_UPENNBIOMK9_04_19_17 == "<200", "190", ABETA_UPENNBIOMK9_04_19_17),
+    TAU_UPENNBIOMK9_04_19_17 = if_else(TAU_UPENNBIOMK9_04_19_17 == "<80", "70", TAU_UPENNBIOMK9_04_19_17),
+    PTAU_UPENNBIOMK9_04_19_17 = if_else(PTAU_UPENNBIOMK9_04_19_17 == "<8", "7", PTAU_UPENNBIOMK9_04_19_17)
+  ) %>%
+  mutate(
+    ABETA_UPENNBIOMK9_04_19_17 = as.numeric(ABETA_UPENNBIOMK9_04_19_17),
+    TAU_UPENNBIOMK9_04_19_17 = as.numeric(TAU_UPENNBIOMK9_04_19_17),
+    PTAU_UPENNBIOMK9_04_19_17 = as.numeric(PTAU_UPENNBIOMK9_04_19_17)
+  )
 
 tad2$DXCHANGE <- factor(tad2$DXCHANGE, 1:9, dxfactors)
+tad2$PTGENDER <- factor(tad2$PTGENDER)
+tad2$PTETHCAT <- factor(tad2$PTETHCAT)
+tad2$PTRACCAT <- factor(tad2$PTRACCAT)
 
+## Need to get other variables to forecast this
+tad3 <- tadpole_d3 %>% select(
+  RID, VISCODE, COLPROT, EXAMDATE,
+  PTGENDER, PTEDUCAT, PTETHCAT, PTRACCAT, AGE,
+  Hippocampus,
+  WholeBrain,
+  Entorhinal,
+  MidTemp,
+  DX,
+  ADAS13,
+  Ventricles
+)
+
+tad3$PTGENDER <- factor(tad3$PTGENDER)
+tad3$PTETHCAT <- factor(tad3$PTETHCAT)
+tad3$PTRACCAT <- factor(tad3$PTRACCAT)
 
 # scatterplot matrix
 dataset <- select(tad1, -(RID:EXAMDATE), -ADAS13, -ADAS13_bl, -Ventricles, -Ventricles_bl) %>% filter(complete.cases(.))
 dataset$DX[dataset$DX == "NL to MCI"] <- "MCI"
 dataset$DX[dataset$DX == "MCI to Dementia"] <- "Dementia"
 dataset$DX[dataset$DX == "MCI to NL"] <- "NL"
-dataset$DX <- as.factor(dataset$DX)
+dataset$DX <- factor(dataset$DX, ordered = TRUE)
+dataset$DX_bl <- factor(dataset$DX_bl)
 
 validation <- select(tad2, -(RID:EXAMDATE), -ADAS13, -ADAS13_bl, -Ventricles, -Ventricles_bl) %>% filter(complete.cases(.))
 validation$DX[validation$DX == "NL to MCI"] <- "MCI"
 validation$DX[validation$DX == "MCI to Dementia"] <- "Dementia"
 validation$DX[validation$DX == "MCI to NL"] <- "NL"
-validation$DX <- as.factor(validation$DX)
+validation$DX <- factor(validation$DX, ordered = TRUE)
+validation$DX_bl <- factor(validation$DX_bl)
 
 metric <- "Accuracy"
-control <- trainControl(method = "cv", number = 5,   classProbs = T,
-                        summaryFunction = multiClassSummary,
-                        savePredictions = T)
+control <- trainControl(
+  method = "cv", number = 5, classProbs = T,
+  summaryFunction = multiClassSummary,
+  savePredictions = T
+)
 set.seed(7)
 fit <- train(DX ~ ., data = dataset, method = "rf", metric = metric, trControl = control)
 set.seed(7)
 # summarize accuracy of models
 predictions <- predict(fit, validation)
 confusionMatrix(predictions, validation$DX)
+
+varImp(fit, scale = FALSE)
