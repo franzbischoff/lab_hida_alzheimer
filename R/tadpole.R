@@ -252,13 +252,20 @@ dataset$DX <- factor(dataset$DX, ordered = TRUE)
 # dataset$DX_bl <- factor(dataset$DX_bl)
 
 # validation <- select(tad2, -(RID:EXAMDATE), -ADAS13, -ADAS13_bl, -Ventricles, -Ventricles_bl, -DXCHANGE, -DX_bl) %>% filter(complete.cases(.))
-validation <- select(tad2, DX, PTGENDER, PTEDUCAT, PTETHCAT, PTRACCAT, AGE, Hippocampus, Entorhinal, MidTemp) %>% filter(complete.cases(.))
-validation$DX[validation$DX == "NL to MCI"] <- "MCI"
-validation$DX[validation$DX == "Dementia to MCI"] <- "MCI"
-validation$DX[validation$DX == "MCI to Dementia"] <- "Dementia"
-validation$DX[validation$DX == "MCI to NL"] <- "NL"
-validation$DX <- factor(validation$DX, ordered = TRUE)
-# validation$DX_bl <- factor(validation$DX_bl)
+longitudinal <- select(tad2, DX, PTGENDER, PTEDUCAT, PTETHCAT, PTRACCAT, AGE, Hippocampus, Entorhinal, MidTemp) %>% filter(complete.cases(.))
+longitudinal$DX[longitudinal$DX == "NL to MCI"] <- "MCI"
+longitudinal$DX[longitudinal$DX == "Dementia to MCI"] <- "MCI"
+longitudinal$DX[longitudinal$DX == "MCI to Dementia"] <- "Dementia"
+longitudinal$DX[longitudinal$DX == "MCI to NL"] <- "NL"
+longitudinal$DX <- factor(longitudinal$DX, ordered = TRUE)
+# longitudinal$DX_bl <- factor(longitudinal$DX_bl)
+
+cross_sectional <- select(tad3, DX, PTGENDER, PTEDUCAT, PTETHCAT, PTRACCAT, AGE, Hippocampus, Entorhinal, MidTemp) %>% filter(complete.cases(.))
+cross_sectional$DX[cross_sectional$DX == "NL to MCI"] <- "MCI"
+cross_sectional$DX[cross_sectional$DX == "Dementia to MCI"] <- "MCI"
+cross_sectional$DX[cross_sectional$DX == "MCI to Dementia"] <- "Dementia"
+cross_sectional$DX[cross_sectional$DX == "MCI to NL"] <- "NL"
+cross_sectional$DX <- factor(cross_sectional$DX, ordered = TRUE)
 
 metric <- "Accuracy"
 control <- trainControl(
@@ -268,9 +275,17 @@ control <- trainControl(
 )
 set.seed(7)
 fit <- train(DX ~ ., data = dataset, method = "rf", metric = metric, trControl = control)
-set.seed(7)
-# summarize accuracy of models
-predictions <- predict(fit, validation)
-confusionMatrix(predictions, validation$DX)
-
 varImp(fit, scale = FALSE)
+
+set.seed(7)
+long_pred <- predict(fit, longitudinal)
+confusionMatrix(long_pred, longitudinal$DX)
+long_mroc <- multiclass.roc(predictions, longitudinal$DX)
+auc(long_mroc)
+
+set.seed(7)
+cross_pred <- predict(fit, cross_sectional)
+confusionMatrix(long_pred, cross_sectional$DX)
+cross_mroc <- multiclass.roc(predictions, cross_sectional$DX)
+auc(cross_mroc)
+
